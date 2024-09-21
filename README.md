@@ -1,15 +1,30 @@
 # GitHub RAG Tutorial
 
-This project consists of a web frontend and a FastAPI backend for a GitHub RAG (Retrieval-Augmented Generation) application.
+## Project Overview
+
+This project allows you to chat with your starred GitHub repositories to easily find the repos you need. It utilizes RAG (Retrieval-Augmented Generation) technology in the background. The process flow is as follows:
+
+1. OAuth GitHub login
+2. Fetch all your starred repos
+3. Retrieve each repo's README
+4. Create chunks from the README content
+5. Generate embeddings for each chunk
+6. Store the embeddings in a PostgreSQL vector store
+
+Here's a visual representation of the project flow:
+
+![Chat image](https://ibb.co/0m939kH)
 
 ## Table of Contents
 
+- [Project Overview](#project-overview)
 - [Prerequisites](#prerequisites)
 - [Backend Setup](#backend-setup)
 - [Helicone Integration](#helicone-integration)
 - [Web Frontend Setup](#web-frontend-setup)
 - [Database Setup](#database-setup)
 - [GitHub OAuth Configuration](#github-oauth-configuration)
+- [Running the Application](#running-the-application)
 
 ## Prerequisites
 
