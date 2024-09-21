@@ -11,8 +11,6 @@ This project allows you to chat with your starred GitHub repositories to easily 
 5. Generate embeddings for each chunk
 6. Store the embeddings in a PostgreSQL vector store
 
-Here's a visual representation of the project flow:
-
 ![Chat image](https://ibb.co/0m939kH)
 
 ## Table of Contents
