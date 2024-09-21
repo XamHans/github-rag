@@ -1,0 +1,16 @@
+# Global ignores
+.DS_Store
+
+# Web ignores
+web/node_modules
+web/.next
+web/.env
+
+# Backend ignores
+backend/__pycache__
+backend/myenv
+backend/.env
+
+# Common ignores (applied to both web and backend)
+**/.env
+**/node_modules
