@@ -9,7 +9,7 @@ This project allows you to chat with your starred GitHub repositories to easily 
 3. Retrieve each repo's README
 4. Create chunks from the README content
 5. Generate embeddings for each chunk
-6. Store the embeddings in a PostgreSQL vector store
+6. Store the embeddings in a Supabase PostgreSQL vector store with pgvector enabled
 
 ![Chat image](https://ibb.co/0m939kH)
 
@@ -28,7 +28,7 @@ This project allows you to chat with your starred GitHub repositories to easily 
 
 - Python 3.8+
 - Node.js 14+
-- PostgreSQL
+- Supabase account (for PostgreSQL with pgvector)
 - Poetry (for Python dependency management)
 - npm or pnpm (for Node.js dependency management)
 
@@ -134,16 +134,19 @@ For more detailed information on setting up and using Helicone, please refer to 
 
 ## Database Setup
 
-1. Ensure PostgreSQL is installed and running.
+This project uses [Supabase](https://supabase.com/) PostgreSQL with pgvector enabled for storing and querying vector embeddings. To set up your database:
 
-2. Create a new database for the project.
-
-3. Run the following SQL script to set up the necessary tables and extensions:
+1. Create a Supabase account if you haven't already.
+2. Create a new project in Supabase.
+3. In your project's SQL editor, enable the pgvector extension:
 
    ```sql
-   -- Enable the pgvector extension to work with embeddings
    CREATE EXTENSION IF NOT EXISTS vector;
+   ```
 
+4. Create the necessary tables and functions:
+
+   ```sql
    -- Create a table for storing repository information
    CREATE TABLE repositories (
      id SERIAL PRIMARY KEY,
@@ -181,7 +184,7 @@ For more detailed information on setting up and using Helicone, please refer to 
    CREATE INDEX idx_embeddings_repository_id ON embeddings(repository_id);
    CREATE INDEX idx_embeddings_chunk_id ON embeddings(chunk_id);
 
-   -- Optional: Create a function to search for similar embeddings
+   -- Create a function to search for similar embeddings
    CREATE OR REPLACE FUNCTION search_similar_embeddings(query_embedding vector(1536), match_threshold FLOAT, match_count INT)
    RETURNS TABLE (
      repository_id INTEGER,
@@ -207,6 +210,14 @@ For more detailed information on setting up and using Helicone, please refer to 
    END;
    $$;
    ```
+
+5. In your project settings, find your database connection details and add them to your `backend/.env` file:
+
+   ```
+   DATABASE_URL=your_supabase_postgres_connection_string
+   ```
+
+For more information on using Supabase with pgvector, refer to the [Supabase Vector documentation](https://supabase.com/docs/guides/database/extensions/pgvector).
 
 ## GitHub OAuth Configuration
 
