@@ -11,7 +11,7 @@ This project allows you to chat with your starred GitHub repositories to easily 
 5. Generate embeddings for each chunk
 6. Store the embeddings in a Supabase PostgreSQL vector store with pgvector enabled
 
-![Chat image](https://ibb.co/0m939kH)
+![Chat Interface](images/chat.png)
 
 ## Table of Contents
 
@@ -81,6 +81,8 @@ This project allows you to chat with your starred GitHub repositories to easily 
    poetry run uvicorn server:app --host 0.0.0.0 --port 8000 --reload
    ```
 
+![Data Ingestion Process](images/ingest.png)
+
 ## Helicone Integration
 
 The backend of this project uses Helicone for monitoring the Language Model (LLM). Helicone provides insights and analytics for your LLM usage, helping you optimize performance and costs.
@@ -96,6 +98,8 @@ To set up Helicone:
 4. Ensure that your LLM requests in the backend code are properly configured to use Helicone.
 
 For more detailed information on setting up and using Helicone, please refer to the [Helicone Quick Start Guide](https://docs.helicone.ai/getting-started/quick-start).
+
+![Monitoring Dashboard](images/monitor.png)
 
 ## Web Frontend Setup
 
