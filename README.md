@@ -176,6 +176,8 @@ select ai.create_vectorizer(
 ); 
 
 
+
+
   
 
 5. In your project settings, find your database connection details and add them to your `backend/.env` file:

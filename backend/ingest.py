@@ -115,18 +115,5 @@ def fetch_readme(repo_full_name: str) -> str:
         logging.error(f"Error fetching README for {repo_full_name}: {str(e)}")
         return None
 
-def create_chunks(text: str, chunk_size: int = 1000, overlap: int = 100) -> List[str]:
-    """
-    Splits the text into overlapping chunks.
-    """
-    logging.info(f"Creating chunks with size {chunk_size} and overlap {overlap}")
-    chunks = []
-    start = 0
-    while start < len(text):
-        end = start + chunk_size
-        chunk = text[start:end]
-        chunks.append(chunk)
-        start = end - overlap
-    logging.info(f"Created {len(chunks)} chunks")
-    return chunks
+
 
