@@ -2,7 +2,7 @@ import asyncio
 from typing import Dict
 
 from ingest import fetch_and_process_user_stars
-from retrieval import retrieve_and_respond
+from retrieval import generate_response
 
 
 async def status_callback(status: Dict) -> None:
@@ -34,4 +34,4 @@ async def test_github_stars_ingestion():
 if __name__ == "__main__":
     # Run the test
     # asyncio.run(test_github_stars_ingestion())
-    asyncio.run(retrieve_and_respond('Show me all repos that use pgai'))
+    asyncio.run(generate_response('Show me all repos that use pgai'))

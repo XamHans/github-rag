@@ -41,27 +41,27 @@ def store_repository(github_username: str, repo_info: Dict):
     finally:
         conn.close()
 
-def search_similar_embeddings(query: str, embedding_model: str = 'text-embedding-3-small', limit: int = 5):
+def search_for_repos(query: str, limit: int = 5):
     """
-    Searches for similar embeddings in the database using semantic similarity.
-    
+       -- Perform similarity search to find relevant blog posts
+
     Args:
-        query: The search query text
-        embedding_model: The OpenAI embedding model to use
+        query_embedding: The embedding vector to search with
+        match_threshold: Threshold for similarity matching
         limit: Maximum number of results to return
     """
     conn = get_db_connection()
     try:
         with conn.cursor() as cur:
-            logging.info(f"Executing semantic search query: {query}")
+            logging.info("Executing semantic search query")
             cur.execute("""
                 SELECT 
                     chunk,
-                    embedding <=> ai.openai_embed(%s, %s) as distance
+                    embedding <=> ai.openai_embed('text-embedding-3-small', %s) as distance
                 FROM "public"."repositories_embedding_store"
                 ORDER BY distance
                 LIMIT %s
-            """, (embedding_model, query, limit))
+            """, (query, limit))
             results = cur.fetchall()
             logging.info(f"Search query returned {len(results)} results")
             return results

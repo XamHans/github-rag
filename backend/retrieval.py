@@ -1,97 +1,91 @@
 import logging
-from typing import List
+from typing import List, Tuple
 
-from db import search_similar_embeddings
-from dotenv import load_dotenv
+from db import search_for_repos
 from provider import AIProvider, ChatMessage, initialize_ai_provider
 from termcolor import colored
 
-# Load environment variables
-load_dotenv()
-
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def log_step(step: str, message: str):
     """Log a step in the process with a colorized output."""
     logging.info(f"{colored(step, 'blue', attrs=['bold'])}: {message}")
 
-async def semantic_search(query: str, ai_provider: AIProvider, match_threshold: float = 0.5, match_count: int = 20):
-    """Perform semantic search using the query and return similar README chunks."""
-    log_step("SEARCH", f"Performing semantic search for query: '{query}'")
-    query_embedding = (await ai_provider.generate_embeddings([query]))[0]
-    results = search_similar_embeddings(query_embedding, match_threshold, match_count)
+def format_repo_context(repos: List[Tuple]) -> str:
+    """Format repository information into a structured context."""
+    context = []
+    for repo in repos:
+        # The repo tuple contains (combined_text, similarity_score)
+        combined_text, score = repo
+        
+        # Parse the combined text to extract information
+        # Expected format: 'name: {name} url: {url} content: {content}'
+        try:
+            # Split only on the first occurrence of each keyword
+            name_part = combined_text.split('name:', 1)[1].split('url:', 1)[0].strip()
+            url_part = combined_text.split('url:', 1)[1].split('content:', 1)[0].strip()
+            content_part = combined_text.split('content:', 1)[1].strip()
+            
+            # Format each repository's information
+            context.append(f"""
+Repository: {name_part}
+URL: {url_part}
+Relevance Score: {score:.2f}
+Description: {content_part}
+---""")
+        except IndexError:
+            # Handle malformed entries gracefully
+            logging.warning(f"Malformed repository entry: {combined_text}")
+            context.append(f"""
+Repository Entry:
+Raw Text: {combined_text}
+Relevance Score: {score:.2f}
+---""")
+            
+    return "\n".join(context)
+
+async def generate_response(query: str) -> str:
+    ai_provider = initialize_ai_provider()
+    """Generate a well-formatted response for the user's query using RAG."""
+    log_step("RESPONSE", "Generating response based on similar repositories")
+    similar_repos = search_for_repos(query)
     
-    log_step("SEARCH", f"Found {len(results)} similar chunks")
-    for i, (name, full_name, content, similarity) in enumerate(results, 1):
-        logging.info(colored(f"  Result {i}:", "cyan"))
-        logging.info(f"    Repository: {full_name}")
-        logging.info(f"    Content: {content[:100]}...")
-        logging.info(f"    Similarity: {similarity:.4f}")
-    return results
-
-async def generate_response(query: str, similar_chunks: List[tuple], ai_provider: AIProvider) -> str:
-    """Generate a well-formatted response for the user's starred repositories related to the query."""
-    log_step("RESPONSE", "Generating response based on similar chunks")
+    # Format the repository context
+    repo_context = format_repo_context(similar_repos)
     
-    # Prepare the data for the prompt
-    repo_data = []
-    for name, full_name, content, similarity in similar_chunks:
-        repo_data.append({
-            "name": name,
-            "full_name": full_name,
-            "url": f"https://github.com/{full_name}",
-            "content": content[:200],  # Limit content to 200 characters for brevity
-            "similarity": similarity
-        })
-    
-    # Sort repo_data by similarity in descending order
-    repo_data.sort(key=lambda x: x['similarity'], reverse=True)
-    
-    prompt = f"""Query: {query}
+    # Create a comprehensive RAG prompt
+    system_prompt = """You are a technical assistant specializing in analyzing GitHub repositories. 
+Your task is to:
+1. Analyze the provided repository information
+2. Understand the user's query and intent
+3. Provide a comprehensive, well-structured response that connects the repositories to the user's needs
+4. Be specific and reference actual features and capabilities from the repositories
+5. Maintain technical accuracy while being clear and concise
 
-Please provide a list of the user's starred GitHub repositories that are most relevant to the query. For each repository, include:
+Format your response in markdown and organize information logically."""
 
-1. The repository name (as a clickable link)
-2. A very brief description (1-2 sentences max)
-3. The similarity score (as a percentage, rounded to one decimal place)
+    user_prompt = f"""User Query: "{query}"
 
-Use the following markdown format:
+Available Repository Information:
+{repo_context}
 
-## Your Starred Repositories Related to "{query}"
+Please provide a response that:
+1. Explains how these repositories specifically address the user's query
+2. Highlights the most relevant features and capabilities from each repository
+3. Provides a clear recommendation based on the repository details
+4. Points out any limitations or considerations the user should be aware of
 
-1. **[Repository Name](link)** - Brief description.
-   *Relevance: XX.X%*
+Focus on concrete details from the repository descriptions rather than making general statements."""
 
-2. **[Next Repository]**...
-
-Include up to 5 most relevant repositories from the user's stars. If none are relevant, state that clearly.
-At the end, add a note about the relevance scores."""
-
-    log_step("RESPONSE", "Sending prompt to AI provider")
     messages = [
-        ChatMessage(role="system", content="You are a helpful assistant that provides concise, structured information about a user's starred GitHub repositories in markdown format."),
-        ChatMessage(role="user", content=prompt)
+        ChatMessage(role="system", content=system_prompt),
+        ChatMessage(role="user", content=user_prompt)
     ]
     
     response = await ai_provider.chat_completion(
         messages=messages,
-        max_tokens=1000,
-        temperature=0.1
+        max_tokens=1500,  # Increased for more comprehensive responses
+        temperature=0.1   # Keep low for factual responses
     )
-    log_step("RESPONSE", f"Generated response: '{response.content}'")
+    
+    log_step("RESPONSE", "Generated structured response")
     return response.content
-
-async def retrieve_and_respond(query: str) -> str:
-    """Main function to retrieve similar chunks and generate a response."""
-    ai_provider = initialize_ai_provider()
-    log_step("MAIN", f"Processing query: '{query}'")
-    
-    similar_chunks = await semantic_search(query, ai_provider)
-    if not similar_chunks:
-        log_step("MAIN", "No similar chunks found")
-        return "I couldn't find any relevant information to answer your query."
-    
-    response = await generate_response(query, similar_chunks, ai_provider)
-    log_step("MAIN", "Process completed successfully")
-    return response
