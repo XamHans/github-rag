@@ -138,17 +138,18 @@ For more detailed information on setting up and using Helicone, please refer to 
 
 ## Database Setup
 
-This project uses [Supabase](https://supabase.com/) PostgreSQL with pgvector enabled for storing and querying vector embeddings. To set up your database:
 
-1. Create a Supabase account if you haven't already.
-2. Create a new project in Supabase.
-3. In your project's SQL editor, enable the pgvector extension:
 
-   ```sql
-   CREATE EXTENSION IF NOT EXISTS vector;
-   ```
+1. Create a timescale account if you haven't already.
+2. Create a new database.
+3. In Timescale Console > Project Settings, click AI Model API Keys.
+Click Add AI Model API Keys, add your key, then click Add API key.
+In AI Extenstions make sure to install the following extensions:
+- ai
+- vector
+- vectorscale
 
-4. Create the necessary tables and functions:
+4. Create the necessary table to store repository information:
 
    ```sql
    -- Create a table for storing repository information
@@ -158,62 +159,24 @@ This project uses [Supabase](https://supabase.com/) PostgreSQL with pgvector ena
      name TEXT NOT NULL,
      full_name TEXT NOT NULL,
      description TEXT,
+     readme TEXT,
      url TEXT NOT NULL,
      language TEXT,
      stars INTEGER,
      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
    );
 
-   -- Create a table for storing README chunks
-   CREATE TABLE readme_chunks (
-     id SERIAL PRIMARY KEY,
-     repository_id INTEGER REFERENCES repositories(id) ON DELETE CASCADE,
-     chunk_index INTEGER NOT NULL,
-     content TEXT NOT NULL,
-     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-   );
+5. create the vectorizer, 
 
-   -- Create a table for storing embeddings
-   CREATE TABLE embeddings (
-     id SERIAL PRIMARY KEY,
-     repository_id INTEGER REFERENCES repositories(id) ON DELETE CASCADE,
-     chunk_id INTEGER REFERENCES readme_chunks(id) ON DELETE CASCADE,
-     embedding vector(1536),
-     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-   );
+select ai.create_vectorizer(
+    'public.repositories'::regclass
+  , embedding=>ai.embedding_openai('text-embedding-3-small', 1536, api_key_name=>'OPENAI_API_KEY')
+  , chunking=>ai.chunking_recursive_character_text_splitter('readme')
+  , formatting=>ai.formatting_python_template('name: $name url: $url content: $chunk')
+); 
 
-   -- Create indexes for better query performance
-   CREATE INDEX idx_repositories_github_username ON repositories(github_username);
-   CREATE INDEX idx_readme_chunks_repository_id ON readme_chunks(repository_id);
-   CREATE INDEX idx_embeddings_repository_id ON embeddings(repository_id);
-   CREATE INDEX idx_embeddings_chunk_id ON embeddings(chunk_id);
 
-   -- Create a function to search for similar embeddings
-   CREATE OR REPLACE FUNCTION search_similar_embeddings(query_embedding vector(1536), match_threshold FLOAT, match_count INT)
-   RETURNS TABLE (
-     repository_id INTEGER,
-     chunk_id INTEGER,
-     similarity FLOAT
-   )
-   LANGUAGE plpgsql
-   AS $$
-   BEGIN
-     RETURN QUERY
-     SELECT
-       e.repository_id,
-       e.chunk_id,
-       1 - (e.embedding <=> query_embedding) AS similarity
-     FROM
-       embeddings e
-     WHERE
-       1 - (e.embedding <=> query_embedding) > match_threshold
-     ORDER BY
-       similarity DESC
-     LIMIT
-       match_count;
-   END;
-   $$;
-   ```
+  
 
 5. In your project settings, find your database connection details and add them to your `backend/.env` file:
 

@@ -1,33 +1,27 @@
-import os
-import requests
-import base64
-from typing import List, Dict, Callable
-import openai
-from db import store_repository_and_embeddings
-import logging
-from dotenv import load_dotenv
 import asyncio
-from openai import OpenAI
+import base64
+import logging
+import os
+from typing import Callable, Dict, List
+
+import requests
+from db import store_repository
+from dotenv import load_dotenv
+from provider import initialize_ai_provider
 
 load_dotenv()
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Assume OpenAI API key is set in environment variables
-# openai.api_key = os.getenv("OPENAI_API_KEY")
-client = OpenAI(
-    api_key=os.getenv("OPENAI_API_KEY"),
-    base_url="https://oai.helicone.ai/v1",
-    default_headers={
-        "Helicone-Auth": f"Bearer {os.getenv('HELICONE_API_KEY')}",
-    }
-)
+
+
 async def fetch_and_process_user_stars(github_username: str, send_status: Callable[[Dict], None]) -> Dict:
     """
     Fetches and processes all starred repositories for a given GitHub user.
     """
     logging.info(f"Starting to fetch and process starred repositories for user: {github_username}")
+    
     try:
         processed_repos = []
         page = 1
@@ -62,22 +56,23 @@ async def fetch_and_process_user_stars(github_username: str, send_status: Callab
                     "total_count": total_repos
                 })
 
+                readme_content = fetch_readme(repo_name)
+
+
                 repo_info = {
                     "name": repo["name"],
                     "full_name": repo_name,
                     "description": repo["description"],
+                    "readme": readme_content,
                     "url": repo["html_url"],
                     "language": repo["language"],
                     "stars": repo["stargazers_count"],
                 }
+                logging.info(f"Processing: {repo_info}")
 
-                readme_content = fetch_readme(repo_name)
 
                 if readme_content:
-                    logging.info(f"README found for {repo_name}. Processing...")
-                    chunks = create_chunks(readme_content)
-                    embeddings = generate_embeddings(chunks)
-                    store_repository_and_embeddings(github_username, repo_info, chunks, embeddings)
+                    store_repository(github_username, repo_info)
                     logging.info(f"Processed and stored info for {repo_name}")
                 else:
                     logging.warning(f"No README found for {repo_name}")
@@ -98,9 +93,9 @@ async def fetch_and_process_user_stars(github_username: str, send_status: Callab
             "status": "success"
         }
 
-    except requests.RequestException as e:
-        logging.error(f"Error fetching starred repositories: {str(e)}")
-        raise Exception(f"Error fetching starred repositories: {str(e)}")
+    except Exception as e:
+        logging.error(f"Error processing repositories: {str(e)}")
+        raise
 
 def fetch_readme(repo_full_name: str) -> str:
     """
@@ -135,22 +130,3 @@ def create_chunks(text: str, chunk_size: int = 1000, overlap: int = 100) -> List
     logging.info(f"Created {len(chunks)} chunks")
     return chunks
 
-def generate_embeddings(chunks: List[str]) -> List[List[float]]:
-    """
-    Generates embeddings for a list of text chunks using OpenAI's API.
-    """
-    logging.info(f"Generating embeddings for {len(chunks)} chunks")
-    try:
-        response = client.embeddings.create(
-            input=chunks,
-            model="text-embedding-ada-002",
-            extra_headers={
-                "Helicone-Cache-Enabled": "true"
-            }
-        )
-        embeddings = [data.embedding for data in response.data]
-        logging.info(f"Successfully generated {len(embeddings)} embeddings")
-        return embeddings
-    except Exception as e:
-        logging.error(f"Error generating embeddings: {str(e)}")
-        raise Exception(f"Error generating embeddings: {str(e)}")

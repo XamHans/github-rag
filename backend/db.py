@@ -1,9 +1,11 @@
-import os
-import psycopg2
-from psycopg2.extras import execute_values
-from typing import List, Dict
-from dotenv import load_dotenv
 import logging
+import os
+from typing import Dict, List
+
+import psycopg2
+from dotenv import load_dotenv
+from psycopg2.extras import execute_values
+
 # Load environment variables
 load_dotenv()
 
@@ -16,9 +18,9 @@ def get_db_connection():
     """
     return psycopg2.connect(DB_CONNECTION)
 
-def store_repository_and_embeddings(github_username: str, repo_info: Dict, chunks: List[str], embeddings: List[List[float]]):
+def store_repository(github_username: str, repo_info: Dict):
     """
-    Stores repository information, README chunks, and their embeddings in the database.
+    Stores repository information, README chunks, and their embeddings in the vector database.
     """
     conn = get_db_connection()
     try:
@@ -31,23 +33,7 @@ def store_repository_and_embeddings(github_username: str, repo_info: Dict, chunk
             """, (github_username, repo_info['name'], repo_info['full_name'], repo_info['description'],
                   repo_info['url'], repo_info['language'], repo_info['stars']))
             repo_id = cur.fetchone()[0]
-
-            # Insert README chunks
-            chunk_data = [(repo_id, idx, chunk) for idx, chunk in enumerate(chunks)]
-            execute_values(cur, """
-                INSERT INTO readme_chunks (repository_id, chunk_index, content)
-                VALUES %s
-                RETURNING id
-            """, chunk_data)
-            chunk_ids = [row[0] for row in cur.fetchall()]
-
-            # Insert embeddings
-            embedding_data = [(repo_id, chunk_id, embedding) for chunk_id, embedding in zip(chunk_ids, embeddings)]
-            execute_values(cur, """
-                INSERT INTO embeddings (repository_id, chunk_id, embedding)
-                VALUES %s
-            """, embedding_data)
-
+ 
         conn.commit()
     except Exception as e:
         conn.rollback()
