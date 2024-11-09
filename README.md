@@ -1,4 +1,4 @@
-# GitHub RAG Tutorial
+# StarSense Tutorial
 
 ## Project Overview
 
@@ -7,9 +7,9 @@ This project allows you to chat with your starred GitHub repositories to easily 
 1. OAuth GitHub login
 2. Fetch all your starred repos
 3. Retrieve each repo's README
-4. Create chunks from the README content
-5. Generate embeddings for each chunk
-6. Store the embeddings in a Supabase PostgreSQL vector store with pgvector enabled
+4. Insert repo information into a PostgreSQL database
+5. pgai vectorizer takes care of generating embeddings for each repo
+6. Use the embeddings view to query for similar repos
 
 ![Chat Interface](images/chat.png)
 
@@ -18,7 +18,6 @@ This project allows you to chat with your starred GitHub repositories to easily 
 - [Project Overview](#project-overview)
 - [Prerequisites](#prerequisites)
 - [Backend Setup](#backend-setup)
-- [Helicone Integration](#helicone-integration)
 - [Web Frontend Setup](#web-frontend-setup)
 - [Database Setup](#database-setup)
 - [GitHub OAuth Configuration](#github-oauth-configuration)
@@ -28,7 +27,8 @@ This project allows you to chat with your starred GitHub repositories to easily 
 
 - Python 3.8+
 - Node.js 14+
-- Supabase account (for PostgreSQL with pgvector)
+- Timescale Account
+- Ollama installed and running
 - Poetry (for Python dependency management)
 - npm or pnpm (for Node.js dependency management)
 
@@ -83,23 +83,7 @@ This project allows you to chat with your starred GitHub repositories to easily 
 
 ![Data Ingestion Process](images/ingest.png)
 
-## Helicone Integration
 
-The backend of this project uses Helicone for monitoring the Language Model (LLM). Helicone provides insights and analytics for your LLM usage, helping you optimize performance and costs.
-
-To set up Helicone:
-
-1. Sign up for a Helicone account if you haven't already.
-2. Obtain your Helicone API key.
-3. Add the Helicone API key to your `backend/.env` file:
-   ```
-   HELICONE_API_KEY=your_helicone_api_key
-   ```
-4. Ensure that your LLM requests in the backend code are properly configured to use Helicone.
-
-For more detailed information on setting up and using Helicone, please refer to the [Helicone Quick Start Guide](https://docs.helicone.ai/getting-started/quick-start).
-
-![Monitoring Dashboard](images/monitor.png)
 
 ## Web Frontend Setup
 
@@ -187,6 +171,12 @@ select ai.create_vectorizer(
    ```
 
 For more information on using Supabase with pgvector, refer to the [Supabase Vector documentation](https://supabase.com/docs/guides/database/extensions/pgvector).
+
+
+## Setup ollama
+We will use ollama for generating the response.
+Learn how to setup ollama from [here](https://github.com/ollama/ollama)
+Make sure you have llama3 model downloaded and the server is running.
 
 ## GitHub OAuth Configuration
 

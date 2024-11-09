@@ -15,7 +15,6 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
-
 async def fetch_and_process_user_stars(github_username: str, send_status: Callable[[Dict], None]) -> Dict:
     """
     Fetches and processes all starred repositories for a given GitHub user.

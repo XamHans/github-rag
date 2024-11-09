@@ -162,7 +162,6 @@ def initialize_ai_provider() -> AIProvider:
             "openai",
             api_key=os.getenv("OPENAI_API_KEY"),
             base_url=os.getenv("OPENAI_BASE_URL"),
-            headers={"Helicone-Auth": f"Bearer {os.getenv('HELICONE_API_KEY')}"} if os.getenv("HELICONE_API_KEY") else None
         )
     elif provider_type == "ollama":
         return create_ai_provider(
